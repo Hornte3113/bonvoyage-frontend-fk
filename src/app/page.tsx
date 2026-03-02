@@ -34,7 +34,7 @@ export default function Home() {
   });
 
   return(
-    <main className={`${inter.className} relative h-screen select-none overflow-hidden text-white antialiased`}>
+    <main className={`${inter.className} relative h-screen select-none overflow-hidden bg-black text-white antialiased`}>
       <AnimatePresence>
         <BackgroundImage
         key="background"

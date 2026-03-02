@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "motion/react";
-import { IoIosGlobe, IoMdSearch, IoMdPerson } from "react-icons/io";
+import { IoIosGlobe } from "react-icons/io";
+import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 function Header() {
     const[active, setActive] = React.useState(0);
     return (
@@ -24,10 +25,22 @@ function Header() {
                     );
 
                 })}
-                <div className="flex items-center gap-6">
-                    <IoMdSearch className=" text-lg"/>
-                    <IoMdPerson className=" text-lg"/>
-
+                <div className="flex items-center gap-4">
+                    <SignedOut>
+                        <SignInButton mode="modal">
+                            <button className="px-3 py-1 rounded border border-white/50 hover:bg-white hover:text-black transition duration-300">
+                                Sign In
+                            </button>
+                        </SignInButton>
+                        <SignUpButton mode="modal">
+                            <button className="px-3 py-1 rounded bg-yellow-500 text-black hover:bg-yellow-400 transition duration-300">
+                                Sign Up
+                            </button>
+                        </SignUpButton>
+                    </SignedOut>
+                    <SignedIn>
+                        <UserButton />
+                    </SignedIn>
                 </div>
 
             </ul>

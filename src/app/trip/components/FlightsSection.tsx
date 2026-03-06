@@ -42,7 +42,7 @@ export default function FlightsSection({ destination }: Props) {
   return (
     <div>
       {/* Search card — overlaps the hero image */}
-      <div className="-mt-12 relative z-10 px-4 max-w-5xl mx-auto mb-6">
+      <div className="-mt-18 relative z-10 px-4 max-w-5xl mx-auto mb-6">
         <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-5">
 
           {/* Trip type selector */}

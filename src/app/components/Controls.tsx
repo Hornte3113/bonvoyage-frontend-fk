@@ -1,5 +1,5 @@
 import React from "react";
-import { IoIosArrowBack, IoIosArrowDown } from "react-icons/io";
+import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 import Progress from "./Progress";
 import { Data, CurrentSlideData } from "@/app/page";
 
@@ -56,7 +56,7 @@ return(
              <IoIosArrowBack className=" text-xl"/>
         </SliderButton>
         <SliderButton handleClick={handleNext}>
-            <IoIosArrowDown className=" text-xl"/>
+            <IoIosArrowForward className=" text-xl"/>
         </SliderButton>
         <Progress curIndex={currentSlideData.index} length={sliderData.length}/>
     </div>

@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
 
   const places = (data.places ?? []).map((p: any) => {
     const photoName = p.photos?.[0]?.name;
-    // Photo URL includes the key — served server-side only via this route
+    
     const photoUrl = photoName
       ? `https://places.googleapis.com/v1/${photoName}/media?maxHeightPx=400&maxWidthPx=600&key=${apiKey}`
       : null;

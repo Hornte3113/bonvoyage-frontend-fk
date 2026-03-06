@@ -38,8 +38,8 @@ function TripPageContent() {
       <TripNav active={activeSection} onChange={setActiveSection} />
 
       {/* Destination hero */}
-      <div className="max-w-5xl mx-auto w-full px-4 pt-6">
-        <div className="relative h-72 w-full overflow-hidden rounded-2xl bg-gray-800 shadow-md">
+      <div className="max-w-6xl mx-auto w-full px-4 pt-6">
+        <div className="relative h-100 w-full overflow-hidden rounded-2xl bg-gray-800 shadow-md">
           {destination.photoUrl ? (
             <img
               src={destination.photoUrl}

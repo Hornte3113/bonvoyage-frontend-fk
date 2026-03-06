@@ -71,9 +71,16 @@ async function resolveLocation(query: string, token: string) {
   if (!res.ok) throw new Error(`No se encontró "${query}"`);
   const data = await res.json();
   const places: any[] = data?.data ?? [];
-  const match = places[0];
+  // prefer city-type results; fall back to first match
+  const match =
+    places.find((p: any) =>
+      (p.navigation?.entityType ?? p.type ?? "").toUpperCase() === "CITY"
+    ) ?? places[0];
   if (!match) throw new Error(`No se encontró "${query}"`);
-  return { skyId: match.skyId, entityId: match.entityId };
+  const skyId = match.skyId ?? match.navigation?.relevantFlightParams?.skyId;
+  const entityId = match.entityId ?? match.navigation?.entityId;
+  if (!skyId || !entityId) throw new Error(`No se pudo resolver el ID de "${query}"`);
+  return { skyId, entityId };
 }
 
 export default function FlightsSection({

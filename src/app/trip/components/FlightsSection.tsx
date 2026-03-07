@@ -118,7 +118,7 @@ export default function FlightsSection({
       body: JSON.stringify({
         external_flight_id: vuelo.id ?? crypto.randomUUID(),
         airline_code: firstLeg?.aerolinea ?? vuelo.aerolinea ?? "UNKNOWN",
-        flight_number: vuelo.id ?? "N/A",
+        flight_number: (vuelo.id ?? "N/A").substring(0, 20),
         origin_airport: firstLeg?.origen ?? vuelo.origen ?? "UNKNOWN",
         destination_airport: firstLeg?.destino ?? vuelo.destino ?? "UNKNOWN",
         departure_time: toISO(firstLeg?.salida ?? vuelo.salida),

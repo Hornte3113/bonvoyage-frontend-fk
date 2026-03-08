@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { IoAirplane, IoCalendarOutline, IoChevronForward } from "react-icons/io5";
+import { IoAirplane, IoCalendarOutline, IoChevronForward, IoHeart, IoHeartOutline } from "react-icons/io5";
 import Link from "next/link";
 import Header from "@/app/components/Header";
 
@@ -29,6 +29,7 @@ export default function MyTripsPage() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [toggling, setToggling] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     async function load() {
@@ -48,6 +49,30 @@ export default function MyTripsPage() {
     }
     load();
   }, [getToken]);
+
+  async function handleToggleFavorite(tripId: string, current: boolean) {
+    if (toggling.has(tripId)) return;
+    setToggling((prev) => new Set(prev).add(tripId));
+    // Optimistic update
+    setTrips((prev) =>
+      prev.map((t) => (t.trip_id === tripId ? { ...t, is_favorite: !current } : t))
+    );
+    try {
+      const token = await getToken();
+      await fetch(`${BACKEND}/api/trips/${tripId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ is_favorite: !current }),
+      });
+    } catch {
+      // Revert on error
+      setTrips((prev) =>
+        prev.map((t) => (t.trip_id === tripId ? { ...t, is_favorite: current } : t))
+      );
+    } finally {
+      setToggling((prev) => { const s = new Set(prev); s.delete(tripId); return s; });
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -94,16 +119,22 @@ export default function MyTripsPage() {
         {!loading && trips.length > 0 && (
           <div className="space-y-3">
             {trips.map((trip) => (
-              <TripCard key={trip.trip_id} trip={trip} onClick={() => {
-                const params = new URLSearchParams({
-                  tripId: trip.trip_id,
-                  name: trip.destination_city ?? trip.destination_name ?? trip.trip_name,
-                });
-                if (trip.start_date) params.set("startDate", trip.start_date.slice(0, 10));
-                if (trip.end_date) params.set("endDate", trip.end_date.slice(0, 10));
-                if (trip.destination_image) params.set("photoUrl", trip.destination_image);
-                router.push(`/trip?${params.toString()}`);
-              }} />
+              <TripCard
+                key={trip.trip_id}
+                trip={trip}
+                toggling={toggling.has(trip.trip_id)}
+                onToggleFavorite={() => handleToggleFavorite(trip.trip_id, trip.is_favorite)}
+                onClick={() => {
+                  const params = new URLSearchParams({
+                    tripId: trip.trip_id,
+                    name: trip.destination_city ?? trip.destination_name ?? trip.trip_name,
+                  });
+                  if (trip.start_date) params.set("startDate", trip.start_date.slice(0, 10));
+                  if (trip.end_date) params.set("endDate", trip.end_date.slice(0, 10));
+                  if (trip.destination_image) params.set("photoUrl", trip.destination_image);
+                  router.push(`/trip?${params.toString()}`);
+                }}
+              />
             ))}
           </div>
         )}
@@ -112,7 +143,17 @@ export default function MyTripsPage() {
   );
 }
 
-function TripCard({ trip, onClick }: { trip: Trip; onClick: () => void }) {
+function TripCard({
+  trip,
+  toggling,
+  onToggleFavorite,
+  onClick,
+}: {
+  trip: Trip;
+  toggling: boolean;
+  onToggleFavorite: () => void;
+  onClick: () => void;
+}) {
   const start = trip.start_date ? new Date(trip.start_date.slice(0, 10) + "T12:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" }) : "";
   const end = trip.end_date ? new Date(trip.end_date.slice(0, 10) + "T12:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" }) : "";
 
@@ -124,20 +165,17 @@ function TripCard({ trip, onClick }: { trip: Trip; onClick: () => void }) {
   };
 
   return (
-    <button
-      onClick={onClick}
-      className="w-full bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all p-4 text-left flex items-center gap-4"
-    >
+    <div className="w-full bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all p-4 flex items-center gap-4">
       {/* Image / icon */}
-      <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+      <button onClick={onClick} className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
         {trip.destination_image ? (
           <img src={trip.destination_image} alt={trip.trip_name} className="w-full h-full object-cover" />
         ) : (
           <IoAirplane className="text-white text-2xl" />
         )}
-      </div>
+      </button>
 
-      <div className="flex-1 min-w-0">
+      <button onClick={onClick} className="flex-1 min-w-0 text-left">
         <div className="flex items-center gap-2 flex-wrap">
           <h3 className="font-bold text-gray-800 text-sm">{trip.trip_name}</h3>
           {trip.status && (
@@ -155,9 +193,24 @@ function TripCard({ trip, onClick }: { trip: Trip; onClick: () => void }) {
             <span>{start} → {end}</span>
           </div>
         )}
-      </div>
+      </button>
 
-      <IoChevronForward className="text-gray-300 flex-shrink-0" />
-    </button>
+      {/* Favorite toggle */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
+        disabled={toggling}
+        title={trip.is_favorite ? "Quitar de favoritos" : "Agregar a favoritos"}
+        className="p-2 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 flex-shrink-0"
+      >
+        {trip.is_favorite
+          ? <IoHeart className="text-red-500 text-xl" />
+          : <IoHeartOutline className="text-gray-300 text-xl hover:text-red-400 transition-colors" />
+        }
+      </button>
+
+      <button onClick={onClick}>
+        <IoChevronForward className="text-gray-300 flex-shrink-0" />
+      </button>
+    </div>
   );
 }

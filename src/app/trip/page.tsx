@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import TripHeader from "./components/TripHeader";
@@ -10,6 +10,7 @@ import HotelsSection from "./components/HotelsSection";
 import PointsOfInterestSection from "./components/PointsOfInterestSection";
 import RestaurantsSection from "./components/RestaurantsSection";
 import ItinerarySection from "./components/ItinerarySection";
+import { IoHeart, IoHeartOutline } from "react-icons/io5";
 import type { ItineraryItem, TripItinerary, DayPlan } from "./types";
 
 export type TripSection = "vuelos" | "hospedaje" | "puntos" | "restaurantes" | "itinerario";
@@ -44,6 +45,8 @@ function TripPageContent() {
   const [savedFlight, setSavedFlight] = useState<{ airline: string; origin: string | null; destination: string | null; departure: string | null; price: number | null } | null>(null);
   const [loadingTrip, setLoadingTrip] = useState(!!tripId);
   const [tripError, setTripError] = useState<string | null>(null);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const togglingFav = useRef(false);
   const [tripMeta, setTripMeta] = useState<{
     startDate: string;
     endDate: string;
@@ -187,6 +190,8 @@ function TripPageContent() {
         }
       }
 
+      setIsFavorite(data.is_favorite ?? false);
+
       // Store trip-level metadata to fill in missing URL params
       setTripMeta({
         startDate: data.start_date?.slice(0, 10) ?? "",
@@ -206,6 +211,25 @@ function TripPageContent() {
   useEffect(() => {
     loadTrip();
   }, [loadTrip]);
+
+  async function toggleFavorite() {
+    if (!tripId || togglingFav.current) return;
+    togglingFav.current = true;
+    const next = !isFavorite;
+    setIsFavorite(next);
+    try {
+      const token = await getToken();
+      await fetch(`${BACKEND}/api/trips/${tripId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ is_favorite: next }),
+      });
+    } catch {
+      setIsFavorite(!next); // revert
+    } finally {
+      togglingFav.current = false;
+    }
+  }
 
   async function addToItinerary(item: ItineraryItem, dayNumber: number) {
     const day = itinerary.days.find((d) => d.dayNumber === dayNumber);
@@ -404,20 +428,36 @@ function TripPageContent() {
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           <div className="absolute inset-0 flex flex-col justify-end p-7">
-            <h1 className="text-white text-5xl font-bold drop-shadow-lg leading-tight">
-              {destination.name}
-            </h1>
-            {destination.country && (
-              <p className="text-white/80 text-2xl font-medium mt-1 drop-shadow">
-                {destination.country}
-              </p>
-            )}
-            {loadingTrip && (
-              <p className="text-white/60 text-sm mt-2">Cargando itinerario...</p>
-            )}
-            {tripError && (
-              <p className="text-red-300 text-sm mt-2">{tripError}</p>
-            )}
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <h1 className="text-white text-5xl font-bold drop-shadow-lg leading-tight">
+                  {destination.name}
+                </h1>
+                {destination.country && (
+                  <p className="text-white/80 text-2xl font-medium mt-1 drop-shadow">
+                    {destination.country}
+                  </p>
+                )}
+                {loadingTrip && (
+                  <p className="text-white/60 text-sm mt-2">Cargando itinerario...</p>
+                )}
+                {tripError && (
+                  <p className="text-red-300 text-sm mt-2">{tripError}</p>
+                )}
+              </div>
+              {tripId && (
+                <button
+                  onClick={toggleFavorite}
+                  title={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
+                  className="flex-shrink-0 w-11 h-11 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/50 transition-colors"
+                >
+                  {isFavorite
+                    ? <IoHeart className="text-red-400 text-2xl" />
+                    : <IoHeartOutline className="text-white text-2xl" />
+                  }
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -262,6 +262,9 @@ function SelectedItemDetail({ item, dayNumber }: { item: ItineraryItem; dayNumbe
             )}
           </div>
         )}
+        {item.description && (
+          <p className="text-[10px] text-gray-600 leading-relaxed">{item.description}</p>
+        )}
         {item.address && (
           <div className="flex items-start gap-1">
             <IoLocationSharp className="text-gray-400 text-[9px] flex-shrink-0 mt-0.5" />

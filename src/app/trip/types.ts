@@ -9,6 +9,7 @@ export type ItineraryItem = {
   photoUrl: string | null;
   rating?: number | null;
   priceLevel?: string | null;
+  description?: string | null;
 };
 
 export type TripDay = {

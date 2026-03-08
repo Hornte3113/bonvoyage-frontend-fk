@@ -94,6 +94,7 @@ export default function PointsOfInterestSection({ destination, tripDays, onAddTo
         photoUrl: poi.photoUrl,
         rating: poi.rating,
         priceLevel: poi.priceLevel,
+        description: poi.description,
       },
       day
     );

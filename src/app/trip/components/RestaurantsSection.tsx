@@ -94,6 +94,7 @@ export default function RestaurantsSection({ destination, tripDays, onAddToItine
         photoUrl: place.photoUrl,
         rating: place.rating,
         priceLevel: place.priceLevel,
+        description: place.description,
       },
       day
     );

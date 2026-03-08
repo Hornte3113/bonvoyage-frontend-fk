@@ -10,7 +10,8 @@ import HotelsSection from "./components/HotelsSection";
 import PointsOfInterestSection from "./components/PointsOfInterestSection";
 import RestaurantsSection from "./components/RestaurantsSection";
 import ItinerarySection from "./components/ItinerarySection";
-import { IoHeart, IoHeartOutline, IoCheckmarkCircle, IoCloseCircle, IoTrophy, IoEllipsisHorizontalCircle } from "react-icons/io5";
+import { IoHeart, IoHeartOutline, IoCheckmarkCircle, IoCloseCircle, IoTrophy, IoEllipsisHorizontalCircle, IoTrashOutline } from "react-icons/io5";
+import { useRouter } from "next/navigation";
 import type { ItineraryItem, TripItinerary, DayPlan } from "./types";
 
 export type TripSection = "vuelos" | "hospedaje" | "puntos" | "restaurantes" | "itinerario";
@@ -20,6 +21,7 @@ const BACKEND = "https://bonvoyage-backend.vercel.app";
 function TripPageContent() {
   const searchParams = useSearchParams();
   const { getToken } = useAuth();
+  const router = useRouter();
 
   const tripId = searchParams.get("tripId");
 
@@ -49,6 +51,8 @@ function TripPageContent() {
   const togglingFav = useRef(false);
   const [tripStatus, setTripStatus] = useState<"DRAFT" | "CONFIRMED" | "COMPLETED" | "CANCELLED">("DRAFT");
   const [changingStatus, setChangingStatus] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deletingTrip, setDeletingTrip] = useState(false);
   const [tripMeta, setTripMeta] = useState<{
     startDate: string;
     endDate: string;
@@ -251,6 +255,22 @@ function TripPageContent() {
       // silent — keep current status
     } finally {
       setChangingStatus(false);
+    }
+  }
+
+  async function deleteTrip() {
+    if (!tripId || deletingTrip) return;
+    setDeletingTrip(true);
+    try {
+      const token = await getToken();
+      await fetch(`${BACKEND}/api/trips/${tripId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      router.push("/my-trips");
+    } catch {
+      setDeletingTrip(false);
+      setConfirmingDelete(false);
     }
   }
 
@@ -457,6 +477,34 @@ function TripPageContent() {
               )}
             </div>
 
+            {/* Delete */}
+            {confirmingDelete ? (
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <span className="text-xs text-gray-500">¿Eliminar?</span>
+                <button
+                  onClick={deleteTrip}
+                  disabled={deletingTrip}
+                  className="px-3 py-1.5 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white text-xs font-semibold rounded-xl transition-colors"
+                >
+                  Sí, eliminar
+                </button>
+                <button
+                  onClick={() => setConfirmingDelete(false)}
+                  className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-semibold rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmingDelete(true)}
+                title="Eliminar viaje"
+                className="p-2 rounded-full hover:bg-red-50 transition-colors flex-shrink-0"
+              >
+                <IoTrashOutline className="text-gray-300 hover:text-red-400 text-lg transition-colors" />
+              </button>
+            )}
+
             {/* Action buttons */}
             <div className="flex items-center gap-2">
               {tripStatus === "DRAFT" && (
@@ -486,7 +534,7 @@ function TripPageContent() {
                     disabled={changingStatus}
                     className="px-4 py-1.5 bg-cyan-500 hover:bg-cyan-600 disabled:opacity-50 text-white text-xs font-semibold rounded-xl transition-colors flex items-center gap-1.5"
                   >
-                    <IoTrophy className="text-sm" />
+                    
                     Marcar completado
                   </button>
                   <button

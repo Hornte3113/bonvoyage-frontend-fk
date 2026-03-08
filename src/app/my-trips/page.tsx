@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { IoAirplane, IoCalendarOutline, IoChevronForward, IoHeart, IoHeartOutline } from "react-icons/io5";
+import { IoAirplane, IoCalendarOutline, IoChevronForward, IoHeart, IoHeartOutline, IoTrashOutline } from "react-icons/io5";
 import Link from "next/link";
 import Header from "@/app/components/Header";
 
@@ -30,6 +30,8 @@ export default function MyTripsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toggling, setToggling] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState<Set<string>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -49,6 +51,31 @@ export default function MyTripsPage() {
     }
     load();
   }, [getToken]);
+
+  async function handleDeleteTrip(tripId: string) {
+    if (deleting.has(tripId)) return;
+    setDeleting((prev) => new Set(prev).add(tripId));
+    setConfirmDelete(null);
+    // Optimistic remove
+    setTrips((prev) => prev.filter((t) => t.trip_id !== tripId));
+    try {
+      const token = await getToken();
+      await fetch(`${BACKEND}/api/trips/${tripId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      // Reload on error to restore the list
+      const token = await getToken();
+      const res = await fetch(`${BACKEND}/api/trips`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setTrips(data.trips ?? data.data ?? data ?? []);
+      }
+    } finally {
+      setDeleting((prev) => { const s = new Set(prev); s.delete(tripId); return s; });
+    }
+  }
 
   async function handleToggleFavorite(tripId: string, current: boolean) {
     if (toggling.has(tripId)) return;
@@ -123,7 +150,12 @@ export default function MyTripsPage() {
                 key={trip.trip_id}
                 trip={trip}
                 toggling={toggling.has(trip.trip_id)}
+                confirmingDelete={confirmDelete === trip.trip_id}
+                deleting={deleting.has(trip.trip_id)}
                 onToggleFavorite={() => handleToggleFavorite(trip.trip_id, trip.is_favorite)}
+                onRequestDelete={() => setConfirmDelete(trip.trip_id)}
+                onCancelDelete={() => setConfirmDelete(null)}
+                onConfirmDelete={() => handleDeleteTrip(trip.trip_id)}
                 onClick={() => {
                   const params = new URLSearchParams({
                     tripId: trip.trip_id,
@@ -146,12 +178,22 @@ export default function MyTripsPage() {
 function TripCard({
   trip,
   toggling,
+  confirmingDelete,
+  deleting,
   onToggleFavorite,
+  onRequestDelete,
+  onCancelDelete,
+  onConfirmDelete,
   onClick,
 }: {
   trip: Trip;
   toggling: boolean;
+  confirmingDelete: boolean;
+  deleting: boolean;
   onToggleFavorite: () => void;
+  onRequestDelete: () => void;
+  onCancelDelete: () => void;
+  onConfirmDelete: () => void;
   onClick: () => void;
 }) {
   const start = trip.start_date ? new Date(trip.start_date.slice(0, 10) + "T12:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" }) : "";
@@ -207,6 +249,34 @@ function TripCard({
           : <IoHeartOutline className="text-gray-300 text-xl hover:text-red-400 transition-colors" />
         }
       </button>
+
+      {/* Delete */}
+      {confirmingDelete ? (
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <span className="text-xs text-gray-500 mr-1">¿Eliminar?</span>
+          <button
+            onClick={(e) => { e.stopPropagation(); onConfirmDelete(); }}
+            disabled={deleting}
+            className="px-2.5 py-1 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
+          >
+            Sí
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onCancelDelete(); }}
+            className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-semibold rounded-lg transition-colors"
+          >
+            No
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={(e) => { e.stopPropagation(); onRequestDelete(); }}
+          title="Eliminar viaje"
+          className="p-2 rounded-full hover:bg-red-50 transition-colors flex-shrink-0"
+        >
+          <IoTrashOutline className="text-gray-300 text-xl hover:text-red-400 transition-colors" />
+        </button>
+      )}
 
       <button onClick={onClick}>
         <IoChevronForward className="text-gray-300 flex-shrink-0" />
